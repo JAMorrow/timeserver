@@ -1,0 +1,11 @@
+SUMMARY
+-------
+
+timeserver runs a simple server to display the time at localhost:<portNumber>/time.
+
+USAGE
+-----
+
+* Run the run.sh shell script to start the server with default values for flags.
+
+* Run runWithArgs.sh to start the server with the -V version flag and the --port flag set to port 8090.
