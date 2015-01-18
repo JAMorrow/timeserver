@@ -1,3 +1,16 @@
+Timeserver
+Version 1.0
+
+VERSION CHANGE LOG
+------------------
+
+v1.1
+Reorganization to isolate page display to timeserverhtml package.  No change in functionality.
+
+v1.0
+Simple webpage displaying time, or 404 if page not available.
+
+
 SUMMARY
 -------
 
