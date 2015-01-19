@@ -37,8 +37,10 @@ func main() {
 	}
 
 	// Setup handlers for the pages.
-	http.HandleFunc("/time", timeserverhtml.ServeTime)
-	http.HandleFunc("/", timeserverhtml.Serve404)
+	http.HandleFunc("/time", timeserverhtml.TimeHandler)
+	http.HandleFunc("/login", timeserverhtml.LoginHandler)
+	http.HandleFunc("/index", timeserverhtml.IndexHandler)
+	http.HandleFunc("/", timeserverhtml.Page404Handler)
 
 	// listen at the given port
 	err := http.ListenAndServe(":" + *port, nil)
