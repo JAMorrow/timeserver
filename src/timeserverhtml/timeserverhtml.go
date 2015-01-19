@@ -32,7 +32,14 @@ func ServeTime(response http.ResponseWriter, request *http.Request) {
 	fmt.Fprintln(response, "<body>")
 	fmt.Fprintln(response, "<p>The time is now <span class=\"time\">")
 	fmt.Fprintln(response, getCurrentTime())
-	fmt.Fprintln(response, "</span>.</p>")
+	fmt.Fprintln(response, "</span>")
+	fmt.Fprintln(response, " (")
+
+	const layout string = "3:04:02 UTC"
+        t := time.Now()
+	fmt.Fprintln(response, t.UTC().Format(layout))
+
+	fmt.Fprintln(response, ").</p>")
 	fmt.Fprintln(response, "</body>")
 	fmt.Fprintln(response, "</html>")
 }
