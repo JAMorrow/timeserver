@@ -39,6 +39,7 @@ func main() {
 	// Setup handlers for the pages.
 	http.HandleFunc("/time", timeserverhtml.TimeHandler)
 	http.HandleFunc("/login", timeserverhtml.LoginHandler)
+	http.HandleFunc("/logout", timeserverhtml.LogoutHandler)
 	http.HandleFunc("/index", timeserverhtml.IndexHandler)
 	http.HandleFunc("/", timeserverhtml.Page404Handler)
 

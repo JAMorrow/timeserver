@@ -16,6 +16,10 @@ import (
 	"time"
 )
 
+var (
+	visited bool = false
+)
+
 // Get the current time and return it as a string.
 // Note: Removes date and timezone information.
 func getCurrentTime() string {
@@ -27,6 +31,7 @@ func getCurrentTime() string {
 
 // serves a webpage that returns the current time.
 func TimeHandler(rw http.ResponseWriter, r *http.Request) {
+
 	fmt.Fprintln(rw, "<html>")
 	fmt.Fprintln(rw, "<head>")
 	fmt.Fprintln(rw, "<style>")
@@ -37,7 +42,16 @@ func TimeHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(rw, "<body>")
 	fmt.Fprintln(rw, "<p>The time is now <span class=\"time\">")
 	fmt.Fprintln(rw, getCurrentTime())
-	fmt.Fprintln(rw, "</span>.</p>")
+
+	// check if cookie is set
+	cookie, err := r.Cookie("name")
+	if err == nil { // there is a cookie, print name
+		fmt.Fprint(rw, "</span>, ")
+		fmt.Fprint(rw, cookie.Value)
+		fmt.Fprint(rw, ".</p>")
+	} else { // else don't print name.
+		fmt.Fprintln(rw, "</span>.</p>")
+	}
 	fmt.Fprintln(rw, "</body>")
 	fmt.Fprintln(rw, "</html>")
 }
@@ -56,65 +70,90 @@ func Page404Handler(rw http.ResponseWriter, r *http.Request) {
 func IndexHandler(rw http.ResponseWriter, r *http.Request) {
 
 	// check if cookie is set
-	cookie, _ := r.Cookie("name")
+	cookie, err := r.Cookie("name")
 
-	// if not, goto login page
+	if err != nil { // there is no cookie
+		http.Redirect(rw, r, "/login", http.StatusBadRequest)
 
-	// else say hi
+	} else { // else say hi
 
-	fmt.Fprintln(rw, "<html>")
-	fmt.Fprintln(rw, "<body>")
-	fmt.Fprintln(rw, "Greetings, ")
-	// TODO name here
-	fmt.Fprint(rw, cookie)
-	fmt.Fprintln(rw, "</p>")
-	fmt.Fprintln(rw, "</body>")
-	fmt.Fprintln(rw, "</html>")
+		fmt.Fprintln(rw, "<html>")
+		fmt.Fprintln(rw, "<body>")
+		fmt.Fprintln(rw, "Greetings, ")
+		fmt.Fprint(rw, cookie.Value)
+		fmt.Fprint(rw, ".")
+		fmt.Fprintln(rw, "</p>")
+		fmt.Fprintln(rw, "</body>")
+		fmt.Fprintln(rw, "</html>")
+	}
 }
 
 // serves a Login webpage if the user has not logged in.
 func LoginHandler(rw http.ResponseWriter, request *http.Request) {
 
 	fmt.Println("Accessed login")
-
 	username := request.FormValue("name")
 	fmt.Println("username is " + username)
 
 	// if name is valid
-	if username != "" {
+	if username != "" && visited {
 		// set the cookie with the name
-		cookie := http.Cookie{Name: "name", Value:username, Path:"/", Expires: time.Now().Add(356 * 24 * time.Hour), HttpOnly: false}
+		cookie := http.Cookie{Name: "name", Value: username, Path: "/", Expires: time.Now().Add(356 * 24 * time.Hour), HttpOnly: false}
 
 		http.SetCookie(rw, &cookie)
-		//request.AddCookie(&cookie)
+		visited = false
 		http.Redirect(rw, request, "/index", http.StatusAccepted)
 
-	} else {
+	} else if username == "" && visited { // if name is not valid
+		fmt.Fprintln(rw, "<html>")
+		fmt.Fprintln(rw, "<body>")
+		fmt.Fprintln(rw, "<form action=\"login\">")
+		fmt.Fprintln(rw, "What is your name, Earthling?")
+		fmt.Fprintln(rw, "C'mon, I need a name.")
+		fmt.Fprintln(rw, "<input type=\"text\" name=\"name\" size=\"50\">")
+		fmt.Fprintln(rw, "<input type=\"submit\">")
+		fmt.Fprintln(rw, "</form>")
+		fmt.Fprintln(rw, "</p>")
+		fmt.Fprintln(rw, "</body>")
+		fmt.Fprintln(rw, "</html>")
 
-	fmt.Fprintln(rw, "<html>")
-	fmt.Fprintln(rw, "<body>")
-	fmt.Fprintln(rw, "<form action=\"login\">")
-	fmt.Fprintln(rw, "What is your name, Earthling?")
-	fmt.Fprintln(rw, "<input type=\"text\" name=\"name\" size=\"50\">")
-	fmt.Fprintln(rw, "<input type=\"submit\">")
-	fmt.Fprintln(rw, "</form>")
-	fmt.Fprintln(rw, "</p>")
-	fmt.Fprintln(rw, "</body>")
-	fmt.Fprintln(rw, "</html>")
+	} else { // first time we hit the page
+
+		fmt.Fprintln(rw, "<html>")
+		fmt.Fprintln(rw, "<body>")
+		fmt.Fprintln(rw, "<form action=\"login\">")
+		fmt.Fprintln(rw, "What is your name, Earthling?")
+		fmt.Fprintln(rw, "<input type=\"text\" name=\"name\" size=\"50\">")
+		fmt.Fprintln(rw, "<input type=\"submit\">")
+		fmt.Fprintln(rw, "</form>")
+		fmt.Fprintln(rw, "</p>")
+		fmt.Fprintln(rw, "</body>")
+		fmt.Fprintln(rw, "</html>")
+		visited = true
 
 	}
-	// set cookie
-	// else do nothing
-
 }
 
 // serves a Logout webpage if the user has logged in and now wants to logout.
 func LogoutHandler(rw http.ResponseWriter, request *http.Request) {
 
-	fmt.Fprintln(rw, "<html>")
-	fmt.Fprintln(rw, "<META http-equiv=\"refresh\" content=\"10;URL=/\">")
-	fmt.Fprintln(rw, "<body>")
-	fmt.Fprintln(rw, "<p>Good-bye.</p>")
-	fmt.Fprintln(rw, "</body>")
-	fmt.Fprintln(rw, "</html>")
+	// find cookie
+	cookie, err := request.Cookie("name")
+
+	if err != nil { // there is no cookie
+		http.Redirect(rw, request, "/index", http.StatusBadRequest)
+
+	} else {
+		cookie.MaxAge = -1 // delete the cookie
+		cookie.Expires = time.Now()
+		cookie.Value = ""          // set the value to null for safety
+		http.SetCookie(rw, cookie) // write this to the cookie
+
+		fmt.Fprintln(rw, "<html>")
+		fmt.Fprintln(rw, "<META http-equiv=\"refresh\" content=\"10;URL=/index\">")
+		fmt.Fprintln(rw, "<body>")
+		fmt.Fprintln(rw, "<p>Good-bye.</p>")
+		fmt.Fprintln(rw, "</body>")
+		fmt.Fprintln(rw, "</html>")
+	}
 }
