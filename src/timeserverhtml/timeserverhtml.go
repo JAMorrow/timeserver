@@ -34,7 +34,6 @@ func getCurrentTime() string {
 
 
 // serves a webpage that returns the current time.
-<<<<<<< HEAD
 func TimeHandler(rw http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintln(rw, "<html>")
@@ -47,41 +46,25 @@ func TimeHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(rw, "<body>")
 	fmt.Fprintln(rw, "<p>The time is now <span class=\"time\">")
 	fmt.Fprintln(rw, getCurrentTime())
-
-	// check if cookie is set
-	cookie, err := r.Cookie("Userhash")
-	if err == nil { // there is a cookie, print name
-		fmt.Fprint(rw, "</span>, ")
-		fmt.Fprint(rw, users[cookie.Value])
-		fmt.Fprint(rw, ".</p>")
-	} else { // else don't print name.
-		fmt.Fprintln(rw, "</span>.</p>")
-	}
-	fmt.Fprintln(rw, "</body>")
-	fmt.Fprintln(rw, "</html>")
-=======
-func ServeTime(response http.ResponseWriter, request *http.Request) {
-	fmt.Fprintln(response, "<html>")
-	fmt.Fprintln(response, "<head>")
-	fmt.Fprintln(response, "<style>")
-	fmt.Fprintln(response, "p {font-size: xx-large}")
-	fmt.Fprintln(response, "span.time {color: red}")
-	fmt.Fprintln(response, "</style>")
-	fmt.Fprintln(response, "</head>")
-	fmt.Fprintln(response, "<body>")
-	fmt.Fprintln(response, "<p>The time is now <span class=\"time\">")
-	fmt.Fprintln(response, getCurrentTime())
-	fmt.Fprintln(response, "</span>")
-	fmt.Fprintln(response, " (")
+	fmt.Fprintln(rw, "</span>")
+	fmt.Fprintln(rw, " (")
 
 	const layout string = "3:04:02 UTC"
         t := time.Now()
-	fmt.Fprintln(response, t.UTC().Format(layout))
+	fmt.Fprintln(rw, t.UTC().Format(layout))
 
-	fmt.Fprintln(response, ").</p>")
-	fmt.Fprintln(response, "</body>")
-	fmt.Fprintln(response, "</html>")
->>>>>>> assignment-01
+	fmt.Fprintln(rw, ")")
+	// check if cookie is set
+	cookie, err := r.Cookie("Userhash")
+	if err == nil { // there is a cookie, print name
+		fmt.Fprint(rw, ", ")
+		fmt.Fprint(rw, users[cookie.Value])
+		fmt.Fprint(rw, ".</p>")
+	} else { // else don't print name.
+		fmt.Fprintln(rw, ".</p>")
+	}
+	fmt.Fprintln(rw, "</body>")
+	fmt.Fprintln(rw, "</html>")
 }
 
 // serves a 404 webpage if the url requested is not found.
