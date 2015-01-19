@@ -14,10 +14,13 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"crypto/sha1"
+	"encoding/hex"
 )
 
 var (
-	visited bool = false
+	visited bool = false // used to keep track of whether or not the login page is visited
+	users = make( map[string]string)
 )
 
 // Get the current time and return it as a string.
@@ -28,6 +31,7 @@ func getCurrentTime() string {
 	t := time.Now()
 	return t.Format(layout)
 }
+
 
 // serves a webpage that returns the current time.
 func TimeHandler(rw http.ResponseWriter, r *http.Request) {
@@ -44,10 +48,10 @@ func TimeHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(rw, getCurrentTime())
 
 	// check if cookie is set
-	cookie, err := r.Cookie("name")
+	cookie, err := r.Cookie("Userhash")
 	if err == nil { // there is a cookie, print name
 		fmt.Fprint(rw, "</span>, ")
-		fmt.Fprint(rw, cookie.Value)
+		fmt.Fprint(rw, users[cookie.Value])
 		fmt.Fprint(rw, ".</p>")
 	} else { // else don't print name.
 		fmt.Fprintln(rw, "</span>.</p>")
@@ -70,7 +74,7 @@ func Page404Handler(rw http.ResponseWriter, r *http.Request) {
 func IndexHandler(rw http.ResponseWriter, r *http.Request) {
 
 	// check if cookie is set
-	cookie, err := r.Cookie("name")
+	cookie, err := r.Cookie("Userhash")
 
 	if err != nil { // there is no cookie
 		http.Redirect(rw, r, "/login", http.StatusBadRequest)
@@ -80,7 +84,7 @@ func IndexHandler(rw http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(rw, "<html>")
 		fmt.Fprintln(rw, "<body>")
 		fmt.Fprintln(rw, "Greetings, ")
-		fmt.Fprint(rw, cookie.Value)
+		fmt.Fprint(rw, users[cookie.Value])
 		fmt.Fprint(rw, ".")
 		fmt.Fprintln(rw, "</p>")
 		fmt.Fprintln(rw, "</body>")
@@ -97,8 +101,14 @@ func LoginHandler(rw http.ResponseWriter, request *http.Request) {
 
 	// if name is valid
 	if username != "" && visited {
+
+		hash := sha1.New()
+		hashstring := hex.EncodeToString(hash.Sum(nil))
+
+		users[hashstring] = username
+
 		// set the cookie with the name
-		cookie := http.Cookie{Name: "name", Value: username, Path: "/", Expires: time.Now().Add(356 * 24 * time.Hour), HttpOnly: false}
+		cookie := http.Cookie{Name: "Userhash", Value: hashstring, Path: "/", Expires: time.Now().Add(356 * 24 * time.Hour), HttpOnly: false}
 
 		http.SetCookie(rw, &cookie)
 		visited = false
@@ -138,7 +148,7 @@ func LoginHandler(rw http.ResponseWriter, request *http.Request) {
 func LogoutHandler(rw http.ResponseWriter, request *http.Request) {
 
 	// find cookie
-	cookie, err := request.Cookie("name")
+	cookie, err := request.Cookie("Userhash")
 
 	if err != nil { // there is no cookie
 		http.Redirect(rw, request, "/index", http.StatusBadRequest)
