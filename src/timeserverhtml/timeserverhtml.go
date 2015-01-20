@@ -14,6 +14,7 @@ import (
 
 	"fmt"
 	"net/http"
+	"html"
 	"sync"
 	"time"
 	"os/exec"
@@ -112,6 +113,9 @@ func LoginHandler(rw http.ResponseWriter, request *http.Request) {
 	username := request.FormValue("name")
 	fmt.Println("username is \"" + username + "\"")
 
+	// sanitize username
+	html.EscapeString(username)
+
 	// if name is valid
 	if username != "" && loginVisited {
 
@@ -123,13 +127,15 @@ func LoginHandler(rw http.ResponseWriter, request *http.Request) {
 		err := cmd.Run()
 		if err != nil {
 			fmt.Println("Error: Unable to run uuidgen.")
-			return
+			loginVisited = false
+			http.Redirect(rw, request, "/index", http.StatusAccepted)
 		}
 
 		id := out.String() // the key
-		// todo: id has trailing /n, should be removed.  Doesn't effect functionality.
+		// id has trailing /n, needs to be removed.
+		id = strings.TrimSuffix(id, "\n")
 
-		fmt.Printf("Uuidgen for user %s: %s", username, id)
+		fmt.Printf("Uuidgen for user %s: %s \n", username, id)
 
 		usersUpdating.Lock()	// enter mutex while updating users
 		users[id] = username
