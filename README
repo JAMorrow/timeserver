@@ -1,8 +1,15 @@
 Timeserver
-Version 1.0
+Version 1.3
 
 VERSION CHANGE LOG
 ------------------
+
+v1.3
+Added map to use uuidgen to map to usernames.  Updated cookies to carry the id instead of the name.  Added concurrency protection to the map.
+
+v1.2
+Added index, login, and logout pages.  Added cookies to track username.
+Added UTC time feature.
 
 v1.1
 Reorganization to isolate page display to timeserverhtml package.  No change in functionality.
@@ -20,5 +27,6 @@ USAGE
 -----
 
 * Run the run.sh shell script to start the server with default values for flags.
+ Reroutes std output to a file in /bin to display error and log messages.
 
 * Run runWithArgs.sh to start the server with the -V version flag and the --port flag set to port 8090.

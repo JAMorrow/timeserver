@@ -1,3 +1,3 @@
 #!/bin/bash
 
-go run src/timeserver.go
+go run src/timeserver/timeserver.go > bin/logs.txt
