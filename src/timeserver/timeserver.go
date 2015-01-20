@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	versionNumber = "1.2" // current version number of the software
+	versionNumber = "1.3" // current version number of the software
 )
 
 var (
