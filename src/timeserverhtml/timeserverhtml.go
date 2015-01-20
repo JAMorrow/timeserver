@@ -11,16 +11,20 @@
 package timeserverhtml
 
 import (
-	"fmt"
-	"net/http"
-	"time"
 	"crypto/sha1"
 	"encoding/hex"
+	"fmt"
+	"net/http"
+	"sync"
+	"time"
 )
 
 var (
-	visited bool = false // used to keep track of whether or not the login page is visited
-	users = make( map[string]string)
+	loginVisited bool = false // used to keep track of whether or not the login page is visited
+
+	usersUpdating = &sync.Mutex{} // used to lock the users map when adding users
+
+	users = make(map[string]string)
 )
 
 // Get the current time and return it as a string.
@@ -32,10 +36,9 @@ func getCurrentTime() string {
 	return t.Format(layout)
 }
 
-
 // serves a webpage that returns the current time.
 func TimeHandler(rw http.ResponseWriter, r *http.Request) {
-
+	fmt.Println("Accessed /time")
 	fmt.Fprintln(rw, "<html>")
 	fmt.Fprintln(rw, "<head>")
 	fmt.Fprintln(rw, "<style>")
@@ -50,7 +53,7 @@ func TimeHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(rw, " (")
 
 	const layout string = "3:04:02 UTC"
-        t := time.Now()
+	t := time.Now()
 	fmt.Fprintln(rw, t.UTC().Format(layout))
 
 	fmt.Fprintln(rw, ")")
@@ -69,6 +72,7 @@ func TimeHandler(rw http.ResponseWriter, r *http.Request) {
 
 // serves a 404 webpage if the url requested is not found.
 func Page404Handler(rw http.ResponseWriter, r *http.Request) {
+	//fmt.Println("Accessed illegal page")
 	http.NotFound(rw, r)
 	fmt.Fprintln(rw, "<html>")
 	fmt.Fprintln(rw, "<body>")
@@ -79,7 +83,7 @@ func Page404Handler(rw http.ResponseWriter, r *http.Request) {
 
 // serves an index webpage if the user has already logged in.
 func IndexHandler(rw http.ResponseWriter, r *http.Request) {
-
+	fmt.Println("Accessed /index")
 	// check if cookie is set
 	cookie, err := r.Cookie("Userhash")
 
@@ -102,26 +106,29 @@ func IndexHandler(rw http.ResponseWriter, r *http.Request) {
 // serves a Login webpage if the user has not logged in.
 func LoginHandler(rw http.ResponseWriter, request *http.Request) {
 
-	fmt.Println("Accessed login")
+	fmt.Println("Accessed /login")
 	username := request.FormValue("name")
-	fmt.Println("username is " + username)
+	fmt.Println("username is \"" + username + "\"")
 
 	// if name is valid
-	if username != "" && visited {
+	if username != "" && loginVisited {
 
 		hash := sha1.New()
 		hashstring := hex.EncodeToString(hash.Sum(nil))
 
+
+		usersUpdating.Lock()	// enter mutex while updating users
 		users[hashstring] = username
+		usersUpdating.Unlock() // exit mutex
 
 		// set the cookie with the name
 		cookie := http.Cookie{Name: "Userhash", Value: hashstring, Path: "/", Expires: time.Now().Add(356 * 24 * time.Hour), HttpOnly: false}
 
 		http.SetCookie(rw, &cookie)
-		visited = false
+		loginVisited = false
 		http.Redirect(rw, request, "/index", http.StatusAccepted)
 
-	} else if username == "" && visited { // if name is not valid
+	} else if username == "" && loginVisited { // if name is not valid
 		fmt.Fprintln(rw, "<html>")
 		fmt.Fprintln(rw, "<body>")
 		fmt.Fprintln(rw, "<form action=\"login\">")
@@ -146,14 +153,14 @@ func LoginHandler(rw http.ResponseWriter, request *http.Request) {
 		fmt.Fprintln(rw, "</p>")
 		fmt.Fprintln(rw, "</body>")
 		fmt.Fprintln(rw, "</html>")
-		visited = true
+		loginVisited = true
 
 	}
 }
 
 // serves a Logout webpage if the user has logged in and now wants to logout.
 func LogoutHandler(rw http.ResponseWriter, request *http.Request) {
-
+	fmt.Println("Accessed /logout")
 	// find cookie
 	cookie, err := request.Cookie("Userhash")
 
