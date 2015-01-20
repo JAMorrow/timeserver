@@ -11,12 +11,14 @@
 package timeserverhtml
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
+
 	"fmt"
 	"net/http"
 	"sync"
 	"time"
+	"os/exec"
+	"strings"
+	"bytes"
 )
 
 var (
@@ -113,16 +115,28 @@ func LoginHandler(rw http.ResponseWriter, request *http.Request) {
 	// if name is valid
 	if username != "" && loginVisited {
 
-		hash := sha1.New()
-		hashstring := hex.EncodeToString(hash.Sum(nil))
+		// get unique key via uuidgen
+		cmd := exec.Command("uuidgen", "-r")  // create a random uuidgen
+		cmd.Stdin = strings.NewReader("some input")
+		var out bytes.Buffer
+		cmd.Stdout = &out
+		err := cmd.Run()
+		if err != nil {
+			fmt.Println("Error: Unable to run uuidgen.")
+			return
+		}
 
+		id := out.String() // the key
+		// todo: id has trailing /n, should be removed.  Doesn't effect functionality.
+
+		fmt.Printf("Uuidgen for user %s: %s", username, id)
 
 		usersUpdating.Lock()	// enter mutex while updating users
-		users[hashstring] = username
+		users[id] = username
 		usersUpdating.Unlock() // exit mutex
 
 		// set the cookie with the name
-		cookie := http.Cookie{Name: "Userhash", Value: hashstring, Path: "/", Expires: time.Now().Add(356 * 24 * time.Hour), HttpOnly: false}
+		cookie := http.Cookie{Name: "Userhash", Value: id, Path: "/", Expires: time.Now().Add(356 * 24 * time.Hour), HttpOnly: false}
 
 		http.SetCookie(rw, &cookie)
 		loginVisited = false
