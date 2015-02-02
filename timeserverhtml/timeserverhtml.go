@@ -42,6 +42,7 @@ func getCurrentTime() string {
 // serves a webpage that returns the current time.
 func TimeHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Println("Accessed /time")
+
 	fmt.Fprintln(rw, "<html>")
 	fmt.Fprintln(rw, "<head>")
 	fmt.Fprintln(rw, "<style>")
