@@ -1,3 +1,4 @@
+{{define "TimeTemplate"}}
 <html>
   <head>
     <style>
@@ -6,6 +7,12 @@
     </style>
   </head>
   <body>
-    <p>The time is now <span class="time">{{.Time}}</span>.</p>
+    <p>The time is now <span class="time">
+    {{.Timebody}}
+    </span> 
+    ({{.UTCTime}})
+    {{.TimeName}}.
+  </p>
   </body>
 </html>
+{{end}}
