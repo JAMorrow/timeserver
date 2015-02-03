@@ -1,18 +1,3 @@
 {{define "TimeTemplate"}}
-<html>
-  <head>
-    <style>
-      p {font-size: xx-large}
-      span.time {color: red}
-    </style>
-  </head>
-  <body>
-    <p>The time is now <span class="time">
-    {{.Timebody}}
-    </span> 
-    ({{.UTCTime}})
-    {{.TimeName}}.
-  </p>
-  </body>
-</html>
+The time is now <span class="time">{{.Timebody}}</span> ({{.UTCTime}}){{.TimeName}}.
 {{end}}

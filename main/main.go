@@ -25,6 +25,8 @@ const (
 var (
 	port = flag.String("port", "8080", "the port number used for the webserver")
 	version = flag.Bool("V", false, "display the version number to console")
+	templates = flag.String("-templates", "../timeserverhtml/templates/",
+		"the directory where the page templates are located.")
  
 )
 
@@ -35,13 +37,16 @@ func main() {
 	if (*version) {
 		fmt.Printf("timeserver Version %s\n", versionNumber)
 	}
+	
+	// Set the templates directory
+	timeserverhtml.SetTemplatesDirectory(*templates)
 
 	// Setup handlers for the pages.
 	http.HandleFunc("/time", timeserverhtml.TimeHandler)
 	http.HandleFunc("/login", timeserverhtml.LoginHandler)
 	http.HandleFunc("/logout", timeserverhtml.LogoutHandler)
 	http.HandleFunc("/index", timeserverhtml.IndexHandler)
-	http.HandleFunc("/", timeserverhtml.Page404Handler)
+//	http.HandleFunc("/", timeserverhtml.Page404Handler)
 
 	// listen at the given port
 	err := http.ListenAndServe(":" + *port, nil)

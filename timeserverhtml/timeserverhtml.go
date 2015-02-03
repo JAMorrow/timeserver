@@ -29,12 +29,13 @@ var (
 
 	users = make(map[string]string)
 
-	TemplateDir    = "../timeserverhtml/templates/" // default tempaltes location
-	TemplateTime   = TemplateDir + "time.html"
-	TemplateIndex  = TemplateDir + "index.html"
-	TemplateLogin  = TemplateDir + "login.html"
-	TemplateLogout = TemplateDir + "logout.html"
-	TemplatePage404 = TemplateDir + "page404.html"
+	TemplateDir     = "../timeserverhtml/templates/" // default tempaltes location
+	TemplatePage string
+	TemplateTime string
+	TemplateIndex string
+	TemplateLogin string
+	TemplateLogout string
+	TemplatePage404 string
 )
 
 type TimeContext struct {
@@ -55,10 +56,32 @@ type GenericContext struct {
 	Unused string
 }
 
-// intitialize
-//func initTemplates() {
+// set the templates directory and update all pages to include that path
+func SetTemplatesDirectory(templatedir string) {
 
-//}
+	fmt.Printf("set templates dir: %s\n", templatedir)
+
+	TemplateDir = templatedir
+	TemplatePage    = TemplateDir + "page.html"
+	TemplateTime    = TemplateDir + "time.html"
+	TemplateIndex   = TemplateDir + "index.html"
+	TemplateLogin   = TemplateDir + "login.html"
+	TemplateLogout  = TemplateDir + "logout.html"
+	TemplatePage404 = TemplateDir + "page404.html"
+}
+
+
+// returns a template containing a specific page's body inside the general page
+// Handles errors internally
+func makeTemplate(body string) *template.Template {
+	tmpl := template.New("page")
+	tmpl, err := tmpl.ParseFiles(TemplatePage, body)
+	if err != nil {
+		fmt.Printf("parsing template: %s\n", err)
+		return nil
+	}
+	return tmpl
+}
 
 // Get the current time and return it as a string.
 // Note: Removes date and timezone information.
@@ -72,19 +95,13 @@ func getCurrentTime() string {
 // serves a webpage that returns the current time.
 func TimeHandler(rw http.ResponseWriter, r *http.Request) {
 
-	tmpl := template.New("time")
-	tmpl, err := tmpl.ParseFiles(TemplateTime)
-	if err != nil {
-		fmt.Printf("parsing template: %s\n", err)
-		return
-	}
+	tmpl := makeTemplate(TemplateTime)
 
 	// start building body string
 	timeBody := getCurrentTime()
 
 	const layout string = "3:04:02 UTC"
-	t := time.Now()
-	utcTime := t.UTC().Format(layout)
+	utcTime := time.Now().UTC().Format(layout)
 
 	// check if cookie is set
 	cookie, err := r.Cookie("Userhash")
@@ -112,36 +129,24 @@ func TimeHandler(rw http.ResponseWriter, r *http.Request) {
 // serves a 404 webpage if the url requested is not found.
 func Page404Handler(rw http.ResponseWriter, r *http.Request) {
 	//fmt.Println("Accessed illegal page")
-	
-		tmpl := template.New("page404")
-		tmpl, err := tmpl.ParseFiles(TemplatePage404)
-		if err != nil {
-			fmt.Printf("parsing template: %s\n", err)
-			return
-		}
-		context := GenericContext {
-			Unused: "",
+	tmpl := makeTemplate(TemplatePage404)
 
-		}
+	context := GenericContext{
+		Unused: "",
+	}
 
-		err = tmpl.ExecuteTemplate(rw, "Page404Template", context)
-		if err != nil {
-			fmt.Printf("executing template: %s\n", err)
-			return
-		}
-http.NotFound(rw, r)
+	err := tmpl.ExecuteTemplate(rw, "Page404Template", context)
+	if err != nil {
+		fmt.Printf("executing template: %s\n", err)
+		return
+	}
+	http.NotFound(rw, r)
 }
 
 // serves an index webpage if the user has already logged in.
 func IndexHandler(rw http.ResponseWriter, r *http.Request) {
 	fmt.Println("Accessed /index")
-
-	tmpl := template.New("index")
-	tmpl, err := tmpl.ParseFiles(TemplateIndex)
-	if err != nil {
-		fmt.Printf("parsing template: %s\n", err)
-		return
-	}
+	tmpl := makeTemplate(TemplateIndex)
 
 	// check if cookie is set
 	cookie, err := r.Cookie("Userhash")
@@ -155,7 +160,7 @@ func IndexHandler(rw http.ResponseWriter, r *http.Request) {
 			Username: users[cookie.Value],
 		}
 
-		err = tmpl.ExecuteTemplate(rw, "IndexTemplate", indexcontext)
+		err := tmpl.ExecuteTemplate(rw, "IndexTemplate", indexcontext)
 		if err != nil {
 			fmt.Printf("executing template: %s\n", err)
 			return
@@ -215,17 +220,12 @@ func LoginHandler(rw http.ResponseWriter, request *http.Request) {
 	} else { // first time we hit the page
 		loginVisited = true
 	}
+	tmpl := makeTemplate(TemplateLogin)
 
-	tmpl := template.New("login")
-	tmpl, err := tmpl.ParseFiles(TemplateLogin)
-	if err != nil {
-		fmt.Printf("parsing template: %s\n", err)
-		return
-	}
 	logincontext := LoginContext{
 		Prompt: prompt,
 	}
-	err = tmpl.ExecuteTemplate(rw, "LoginTemplate", logincontext)
+	err := tmpl.ExecuteTemplate(rw, "LoginTemplate", logincontext)
 	if err != nil {
 		fmt.Printf("executing template: %s\n", err)
 		return
@@ -248,15 +248,10 @@ func LogoutHandler(rw http.ResponseWriter, request *http.Request) {
 		cookie.Value = ""          // set the value to null for safety
 		http.SetCookie(rw, cookie) // write this to the cookie
 
-		tmpl := template.New("logout")
-		tmpl, err := tmpl.ParseFiles(TemplateLogout)
-		if err != nil {
-			fmt.Printf("parsing template: %s\n", err)
-			return
-		}
-		context := GenericContext {
-			Unused: "",
+		tmpl := makeTemplate(TemplateLogout)
 
+		context := GenericContext{
+			Unused: "",
 		}
 
 		err = tmpl.ExecuteTemplate(rw, "LogoutTemplate", context)
