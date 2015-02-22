@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"strings"
 	"net/url"
+	"math/rand"
 	"github.com/JKowalsky/usercookie"
 	"github.com/Curtalius/Page"
 	log "github.com/cihub/seelog"
@@ -29,6 +30,7 @@ const (
 	versionNumber = "1.3" // current version number of the software
 )
 
+// command line flags
 var (
 	port = flag.String("port", "8080", "the port number used for the webserver")
 	authport = flag.String("authport", "9080", "the port number used for the authorization webserver")
@@ -37,12 +39,45 @@ var (
 	templates = flag.String("-templates", "templates",
 		"the directory where the page templates are located.")
 	logname = flag.String("-log", "seelog.xml", "the location/name of the log config file.")
- 
+	avgRespMs = flag.Int("-avg-response-ms", 100, "the number of milliseconds on average to get the time.")
+	deviationMs = flag.Int("-deviation-ms", 10, "the standard deviation from average milliseconds to get time.  Also in milliseconds.") 
 )
 
 var (
 	authserver string
 )
+
+// generates a random normally distributed number from a given
+// mean and standard deviation.
+func randomNormalDelay(mean_ms int, dev_ms int) time.Duration {
+	// get random number
+	random_ms := rand.NormFloat64() * float64(dev_ms) + float64(mean_ms)
+	log.Info("Random wait time: ", random_ms)
+
+	// create time.Duration
+	delay := time.Duration(random_ms) * time.Millisecond
+	return delay
+}
+
+// get a given username associated with a cookie
+func getUsername(id string) string {
+	name := ""
+		// lookup name associated with the cookie
+		resp, rerr := http.Get(authserver + "/get?cookie=" + id )
+		if (rerr != nil) {
+			fmt.Println(rerr)
+			return name
+		}
+		body, ioerr := ioutil.ReadAll(resp.Body)
+		if ioerr != nil {
+			fmt.Println(ioerr)
+			return name
+		}
+		log.Info("Name for this cookie: " + string(body) )
+	  name = string(body)
+		resp.Body.Close()
+	  return name
+}
 
 
 func helloPage(w http.ResponseWriter, r *http.Request) {
@@ -53,21 +88,7 @@ func helloPage(w http.ResponseWriter, r *http.Request) {
 
 		cookie, _ := r.Cookie("Userhash")
 		log.Info("Cookie Userhash: " + cookie.Value)
-		name += ", "
-
-		// lookup name associated with the cookie
-		resp, rerr := http.Get(authserver + "/get?cookie=" + cookie.Value )
-		if (rerr != nil) {
-			fmt.Println(rerr)
-
-		}
-		body, ioerr := ioutil.ReadAll(resp.Body)
-		if ioerr != nil {
-			fmt.Println(ioerr)
-		}
-		log.Info("Name for this cookie: " + string(body) )
-		name += string(body)
-		resp.Body.Close()
+		name += ", " + getUsername(cookie.Value)
 	}
 
 	// write the page
@@ -93,17 +114,21 @@ func loginPage(w http.ResponseWriter, r *http.Request) {
 	if name == "" && submit == "Submit" {
 		log.Warn("Blank name given")
 		context.Alert = "Cmon I need a name"
+
 	} else if submit == "Submit" && strings.ContainsAny( name, "#&%/" ) {
 		log.Warn("Illegal name given")
 		context.Alert = "Names can't contain the following characters #&%/"
+
 	} else if name != "" {
 		id, err := usercookie.CreateCookie(w, name)
+
 		if err == nil {
 			// created the cookie, now update authserver
 			resp, _ := http.PostForm( authserver + "/set", url.Values{"cookie": {id}, "name": {name}} )
 			resp.Body.Close()
 			http.Redirect(w,r,"/home",http.StatusFound)
 			return
+
 		}	else { // cookie creation was unsuccessful
 			log.Error("Cookie not created.  Try again.")
 		}
@@ -120,8 +145,10 @@ func loginPage(w http.ResponseWriter, r *http.Request) {
 
 // time server
 func timeServer(w http.ResponseWriter, r *http.Request) {
-
 	log.Info("HTTP Request: Time Server Page")
+
+	// simulate load by delaying some random amount
+	time.Sleep( randomNormalDelay((*avgRespMs), (*deviationMs)))
 
 	// Get the time and format it
 	curTime := time.Now()
@@ -132,12 +159,11 @@ func timeServer(w http.ResponseWriter, r *http.Request) {
 	myTime := curTime.Format("Jan _2 15:04:05") + " (" + utcTime.Format("15:04:05 UTC") + ")"
 
 	// Add name if available
-
 	name := ""
 	log.Info("Check for cookie")
 	if usercookie.CookieExists(r) {
-		name += ", "
-//		name += usercookie.GetUsername(r)
+		cookie, _ := r.Cookie("Userhash")
+		name += ", " + getUsername(cookie.Value)
 
 	}
 	context := Page.TimeContext{Name:name,Time:myTime}
