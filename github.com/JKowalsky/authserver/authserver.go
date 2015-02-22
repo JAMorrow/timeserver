@@ -15,7 +15,9 @@ import (
 	"os"
 	"net/http"
 	"sync"
-//	"github.com/JKowalsky/usercookie"
+	"time"
+	"encoding/json"
+	"io/ioutil"
 	log "github.com/cihub/seelog"
 )
 
@@ -31,6 +33,8 @@ var (
 	templates = flag.String("-templates", "templates",
 		"the directory where the page templates are located.")
 	logname = flag.String("-log", "seelog.xml", "the location/name of the log config file.")
+	dumpfile = flag.String("-dumpfile", "dumpfile", "A file containing the users information for backup purposes.")
+	checkptInterval = flag.Int("-checkpoint-interval", 10, "Updates the backup file every X seconds.  default is 10.")
  
 )
 
@@ -39,6 +43,96 @@ var (
 	usersUpdating = &sync.Mutex{} // used to lock the users map when adding users
 	users = make(map[string]string)
 )
+
+// while server exists, wait checkptInterval number of seconds, then perform backup
+func backupUsers() {
+	for {
+		time.Sleep(time.Duration((*checkptInterval)) * time.Second)
+		log.Info("Backing up users.")
+		// check if dumpfile already exists
+		oldfile, err := os.Open((*dumpfile))
+		if err == nil {	// if so, rename it.
+			oldfile.Close()
+			os.Rename((*dumpfile), (*dumpfile) + ".bak")
+		}
+
+		// copy current dictionary to reduce time we're tying it up
+
+		backupUsers := make(map[string]string)
+		usersUpdating.Lock()
+		for key, value := range users {
+			backupUsers[key] = value
+		}
+		usersUpdating.Unlock()
+
+		// encode our dictionary into a JSON file
+		jsonmap, err := json.Marshal(backupUsers)
+
+		// lets see it
+		log.Info("jsonmap: " + string(jsonmap))
+		if err != nil {
+			log.Error(err)
+		}
+
+		var (
+			file *os.File
+		)
+
+		if file, err = os.Create((*dumpfile)); err != nil {
+			return
+		}
+		file.WriteString(string(jsonmap))
+		file.Close()
+
+		if (!verifyFileContents(backupUsers)) {
+			log.Error("Backup unsuccessful!")
+		} else {
+			log.Info("Backup Verified.")
+		}
+	}
+}
+
+func verifyFileContents(usersMap map[string]string) bool {
+	// retrieve data from backup.
+	usersOnFile, _ := retrieveUsersFromBackup()
+
+	// quick check, see if the maps have the same length.  If not, they are different.
+	if len(usersMap) != len(usersOnFile) {
+		return false
+	}
+
+	for key, value := range usersMap {
+		if usersOnFile[key] != value {
+			return false
+		}
+	}
+	return true
+}
+
+// assumes file exists
+func retrieveUsersFromBackup() (map[string]string, error) {
+
+	userMap := make(map[string]string)
+
+	content, err := ioutil.ReadFile((*dumpfile))
+	log.Info("content: " + string(content))
+
+	if err != nil {
+		return userMap, err
+	}
+
+	// unmarshal
+
+
+	err = json.Unmarshal(content, &userMap)
+	// for debugging
+
+	for key, value := range userMap {
+		log.Info("key: " + key + " value: " + value)
+	}
+
+	return userMap, err
+}
 
 func getNameHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
@@ -58,15 +152,6 @@ func getNameHandler(w http.ResponseWriter, r *http.Request) {
 		log.Info("Name not found.")
 		w.WriteHeader(http.StatusBadRequest)
 	}
-
-	/*if err == nil {
-		w.WriteHeader(http.StatusOK)
-		// convert name to bytes
-		w.Write([]byte(name))
-	} else {
-		w.WriteHeader(http.StatusBadRequest)
-	}*/
-
 }
 
 
@@ -106,18 +191,28 @@ func main() {
 		log.Info("timeserver Version %s\n", versionNumber)
 	}
 
+	// check if there is a backup file.  If so, use it.
+	// check if dumpfile already exists
+	backup, err := os.Open((*dumpfile))
+	if err == nil {	// if so, load it.
+		backup.Close()
+		log.Info("Loading Backup.")
+		users, _ = retrieveUsersFromBackup()
+	}
+
+	go backupUsers()
+
 	// handle get requests
 	go http.HandleFunc("/get", getNameHandler)
 
 	// handle set requests
-	// todo, should dynamically match  /set?cooke=cookie&name=name
 	go http.HandleFunc("/set", setCookieHandler)
 
 	// refuse other requests
 	go http.HandleFunc("/*", defaultHandler)
 
 	// listen at the given port
-	err := http.ListenAndServe(":" + *authport, nil)
+	err = http.ListenAndServe(":" + *authport, nil)
 
 	// check if there was a problem listening at that port.
 	if err != nil {
