@@ -21,6 +21,7 @@ import (
 	"strings"
 	"net/url"
 	"math/rand"
+	"sync"
 	"github.com/JKowalsky/usercookie"
 	"github.com/Curtalius/Page"
 	log "github.com/cihub/seelog"
@@ -41,11 +42,45 @@ var (
 	logname = flag.String("-log", "seelog.xml", "the location/name of the log config file.")
 	avgRespMs = flag.Int("-avg-response-ms", 100, "the number of milliseconds on average to get the time.")
 	deviationMs = flag.Int("-deviation-ms", 10, "the standard deviation from average milliseconds to get time.  Also in milliseconds.") 
+  maxInflight = flag.Int("-max-inflight", 0, "the maximum number of requests that can be serviced.  Default is as many as the server can handle without collapsing.")
 )
 
 var (
 	authserver string
 )
+
+var (
+	updatingInflight = &sync.Mutex{} // used to lock the users map when adding users
+	inflight = 0
+)
+
+// add one to inflight
+// check if ma-inflight has been reached, if so, return false
+// and do not increment
+func addInflight() bool {
+  updatingInflight.Lock()
+
+	// if maxInflight == 0, don't bother
+	if (*maxInflight) == 0 {
+		updatingInflight.Unlock()
+		return true
+  }
+	if (inflight == (*maxInflight)) { // refuse
+		updatingInflight.Unlock()
+		return false
+	} else { // update
+		inflight++
+		updatingInflight.Unlock()
+		return true
+	}
+}
+
+// subtract one from inflight
+func subInflight() {
+  updatingInflight.Lock()
+	inflight--
+  updatingInflight.Unlock()
+}
 
 // generates a random normally distributed number from a given
 // mean and standard deviation.
@@ -62,25 +97,33 @@ func randomNormalDelay(mean_ms int, dev_ms int) time.Duration {
 // get a given username associated with a cookie
 func getUsername(id string) string {
 	name := ""
-		// lookup name associated with the cookie
-		resp, rerr := http.Get(authserver + "/get?cookie=" + id )
-		if (rerr != nil) {
-			fmt.Println(rerr)
-			return name
-		}
-		body, ioerr := ioutil.ReadAll(resp.Body)
-		if ioerr != nil {
-			fmt.Println(ioerr)
-			return name
-		}
-		log.Info("Name for this cookie: " + string(body) )
-	  name = string(body)
-		resp.Body.Close()
-	  return name
+	// lookup name associated with the cookie
+	resp, rerr := http.Get(authserver + "/get?cookie=" + id )
+	if (rerr != nil) {
+		fmt.Println(rerr)
+		return name
+	}
+	body, ioerr := ioutil.ReadAll(resp.Body)
+	if ioerr != nil {
+		fmt.Println(ioerr)
+		return name
+	}
+	log.Info("Name for this cookie: " + string(body) )
+	name = string(body)
+	resp.Body.Close()
+	return name
 }
 
 
 func helloPage(w http.ResponseWriter, r *http.Request) {
+  // check if we can handle this request
+	acceptedRequest := addInflight()
+  
+	// if refused, return a server error.
+	if !acceptedRequest {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Warn("HTTP Status Internal Server Error")
+	}
 	log.Info("HTTP Request: Home page")
 	name := ""
 	log.Info("Check for cookie")
@@ -98,9 +141,19 @@ func helloPage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error(err.Error())
 	}
+  subInflight()
 }
 // Login Form
 func loginPage(w http.ResponseWriter, r *http.Request) {
+  // check if we can handle this request
+	acceptedRequest := addInflight()
+  
+	// if refused, return a server error.
+	if !acceptedRequest {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Warn("HTTP Status Internal Server Error")
+	}
+
 	if usercookie.CookieExists(r) {
 		http.Redirect(w,r,"/home",http.StatusFound)
 	}
@@ -127,6 +180,7 @@ func loginPage(w http.ResponseWriter, r *http.Request) {
 			resp, _ := http.PostForm( authserver + "/set", url.Values{"cookie": {id}, "name": {name}} )
 			resp.Body.Close()
 			http.Redirect(w,r,"/home",http.StatusFound)
+			subInflight()
 			return
 
 		}	else { // cookie creation was unsuccessful
@@ -139,12 +193,21 @@ func loginPage(w http.ResponseWriter, r *http.Request) {
 		log.Error(err.Error())
 	}
 	// login form
+	subInflight()
 	return
 }
 
 
 // time server
 func timeServer(w http.ResponseWriter, r *http.Request) {
+	// check if we can handle this request
+	acceptedRequest := addInflight()
+  
+	// if refused, return a server error.
+	if !acceptedRequest {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Warn("HTTP Status Internal Server Error")
+	}
 	log.Info("HTTP Request: Time Server Page")
 
 	// simulate load by delaying some random amount
@@ -173,10 +236,19 @@ func timeServer(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error(err.Error())
 	}
+	subInflight()
 }
 
 // 404 error handler function
 func yotsuba(w http.ResponseWriter, r *http.Request) {
+  // check if we can handle this request
+	acceptedRequest := addInflight()
+  
+	// if refused, return a server error.
+	if !acceptedRequest {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Warn("HTTP Status Internal Server Error")
+	}
 	w.WriteHeader(http.StatusNotFound)
 	//use template
 	err := Page.GetPage(w,"yotsuba",nil)
@@ -184,9 +256,17 @@ func yotsuba(w http.ResponseWriter, r *http.Request) {
 		log.Error(err.Error())
 	}
 	log.Warn("HTTP Status 404: Page not found redirect")
+	subInflight()
 }
 func logout(w http.ResponseWriter, r *http.Request) {
-
+  // check if we can handle this request
+	acceptedRequest := addInflight()
+  
+	// if refused, return a server error.
+	if !acceptedRequest {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Warn("HTTP Status Internal Server Error")
+	}
 	if usercookie.CookieExists(r) {
 		usercookie.LogoutCookie(w, r)
 	}
@@ -195,10 +275,18 @@ func logout(w http.ResponseWriter, r *http.Request) {
 		log.Error(err.Error())
 	}
 	log.Info("HTTP Request: Logout Page")
-
+	subInflight()
 }
 
 func bannerHandler(w http.ResponseWriter, r *http.Request) {
+  // check if we can handle this request
+	acceptedRequest := addInflight()
+  
+	// if refused, return a server error.
+	if !acceptedRequest {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Warn("HTTP Status Internal Server Error")
+	}
 	file, err := os.Open("bin/banner.css")
 	if err != nil {
 		log.Error(err.Error())
@@ -208,6 +296,7 @@ func bannerHandler(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w,file)
 
 	log.Info("HTTP Request: Banner Style Sheet")
+	subInflight()
 }
 
 
@@ -225,7 +314,7 @@ func main() {
 
 
 	defer log.Flush()
-      
+	
 	flag.Parse() // get command line arguments
 
 	// check if version number is requested.
