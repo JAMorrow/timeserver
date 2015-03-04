@@ -6,7 +6,6 @@ import (
 
 	"fmt"
 	"net/http"
-	"net"
 	"time"
 	"github.com/JKowalsky/counter"
 	log "github.com/cihub/seelog"
@@ -37,7 +36,7 @@ func request() {
 	log.Info("New Request.")
 	timeout := time.Duration(timeoutMs) * time.Millisecond
 	client := http.Client{
-		Timeout: timeout,
+		Timeout : timeout,
 	}
 	response, err := client.Get(url)
 	if err != nil {
