@@ -39,6 +39,7 @@ func CreateCookie(rw http.ResponseWriter, username string) (string, error) {
 
 	log.Info("Uuidgen for user " + username + ": " + id)
 
+
 	/*usersUpdating.Lock() // enter mutex while updating users
 	users[id] = username
 	usersUpdating.Unlock() // exit mutex*/

@@ -1,0 +1,52 @@
+
+
+package counter
+
+type request struct {
+
+	resp chan 
+	increment bool
+	key int
+	delta int
+}
+
+
+func New() *Counter {
+	c:=&Counter
+
+	go counter(c)
+
+	return c
+
+}
+
+
+func (c *Counter) Get (key string) int {
+	rep:= make (chan int)
+
+	c req <- request {
+		rep: nil,
+		incremnt: true,
+		key: key,
+		delta: delta
+
+	}
+
+}
+
+
+fuc counter(c *Counter) {
+fata :=make mak strin int)
+
+
+for req := range c.req {
+if req.increment {
+	data[req.key] =data[req.key] + req.delta
+}else {
+	req.resp <-data[req.key]
+}
+
+
+}
+
+}

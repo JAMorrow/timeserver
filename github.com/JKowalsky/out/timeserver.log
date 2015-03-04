@@ -1,0 +1,15 @@
+2015-02-22	[INFO]	/home/kowalsky/go/src/github.com/cihub/seelog/log.go:github.com_cihub_seelog.Info:266	HTTP Request: Home page
+2015-02-22	[INFO]	/home/kowalsky/go/src/github.com/cihub/seelog/log.go:github.com_cihub_seelog.Info:266	Check for cookie
+2015-02-22	[INFO]	/home/kowalsky/go/src/github.com/cihub/seelog/log.go:github.com_cihub_seelog.Info:266	Cookie Userhash: c328e655-d450-48c6-ae87-071a09919e8d
+2015-02-22	[INFO]	/home/kowalsky/go/src/github.com/cihub/seelog/log.go:github.com_cihub_seelog.Info:266	Name for this cookie: godzilla
+2015-02-22	[INFO]	/home/kowalsky/go/src/github.com/cihub/seelog/log.go:github.com_cihub_seelog.Info:266	HTTP Request: Banner Style Sheet
+2015-02-22	[INFO]	/home/kowalsky/go/src/github.com/cihub/seelog/log.go:github.com_cihub_seelog.Info:266	HTTP Request: Time Server Page
+2015-02-22	[INFO]	/home/kowalsky/go/src/github.com/cihub/seelog/log.go:github.com_cihub_seelog.Info:266	Random wait time: 87.66241822402053
+2015-02-22	[INFO]	/home/kowalsky/go/src/github.com/cihub/seelog/log.go:github.com_cihub_seelog.Info:266	Check for cookie
+2015-02-22	[INFO]	/home/kowalsky/go/src/github.com/cihub/seelog/log.go:github.com_cihub_seelog.Info:266	Name for this cookie: godzilla
+2015-02-22	[INFO]	/home/kowalsky/go/src/github.com/cihub/seelog/log.go:github.com_cihub_seelog.Info:266	HTTP Request: Banner Style Sheet
+2015-02-22	[INFO]	/home/kowalsky/go/src/github.com/cihub/seelog/log.go:github.com_cihub_seelog.Info:266	HTTP Request: Home page
+2015-02-22	[INFO]	/home/kowalsky/go/src/github.com/cihub/seelog/log.go:github.com_cihub_seelog.Info:266	Check for cookie
+2015-02-22	[INFO]	/home/kowalsky/go/src/github.com/cihub/seelog/log.go:github.com_cihub_seelog.Info:266	Cookie Userhash: c328e655-d450-48c6-ae87-071a09919e8d
+2015-02-22	[INFO]	/home/kowalsky/go/src/github.com/cihub/seelog/log.go:github.com_cihub_seelog.Info:266	Name for this cookie: godzilla
+2015-02-22	[INFO]	/home/kowalsky/go/src/github.com/cihub/seelog/log.go:github.com_cihub_seelog.Info:266	HTTP Request: Banner Style Sheet

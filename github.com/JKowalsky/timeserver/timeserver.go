@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	versionNumber = "1.3" // current version number of the software
+	versionNumber = "1.5" // current version number of the software
 )
 
 // command line flags
@@ -43,6 +43,7 @@ var (
 	avgRespMs = flag.Int("-avg-response-ms", 100, "the number of milliseconds on average to get the time.")
 	deviationMs = flag.Int("-deviation-ms", 10, "the standard deviation from average milliseconds to get time.  Also in milliseconds.") 
   maxInflight = flag.Int("-max-inflight", 0, "the maximum number of requests that can be serviced.  Default is as many as the server can handle without collapsing.")
+	authtimeoutms= flag.Int("-authtimeout-ms", 100, "the number of milliseconds on average to wait on the authserver.")
 )
 
 var (
@@ -55,7 +56,7 @@ var (
 )
 
 // add one to inflight
-// check if ma-inflight has been reached, if so, return false
+// check if max-inflight has been reached, if so, return false
 // and do not increment
 func addInflight() bool {
   updatingInflight.Lock()
@@ -299,18 +300,16 @@ func bannerHandler(w http.ResponseWriter, r *http.Request) {
 	subInflight()
 }
 
-
-
 func main() {
 
-	/*logger, err := log.LoggerFromConfigAsFile(*logname)
+	logger, err := log.LoggerFromConfigAsFile(*logname)
 
 	if err != nil {
 		log.Error(err)
 		os.Exit(1)
 	}
 
-	log.ReplaceLogger(logger)*/
+	log.ReplaceLogger(logger)
 
 
 	defer log.Flush()
@@ -323,6 +322,8 @@ func main() {
 	}
 	
 	authserver = "http://" + (*authhost) + ":" + (*authport)
+
+	//authserverTimeout := time.Duration((*authtimeoutms))
 
 	// Setup handlers for the pages.
 
@@ -348,7 +349,7 @@ func main() {
 
 
 	// listen at the given port
-	err := http.ListenAndServe(":" + *port, nil)
+	err = http.ListenAndServe(":" + *port, nil)
 
 	// check if there was a problem listening at that port.
 	if err != nil {

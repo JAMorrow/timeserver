@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	versionNumber = "0.1" // current version number of the software
+	versionNumber = "1.0" // current version number of the software
 )
 
 

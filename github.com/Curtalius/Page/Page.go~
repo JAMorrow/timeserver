@@ -1,0 +1,92 @@
+// Templates
+//
+// Manages the templates for the time server
+// Uses a single function call to load up a web page and return the template
+// to the calling function
+
+package Page
+
+import (
+	"html/template"
+	"net/http"
+	"errors"
+)
+
+// Context structs
+type LoginContext struct{
+	Alert string
+}
+
+type HelloContext struct{
+	Name string
+}
+
+type TimeContext struct{
+	Time, Name string
+}
+
+
+var (
+	// File lists for the different pages
+	LoginFiles = []string{
+		"templates/page.tmpl",
+		"templates/login.tmpl",
+	}
+
+	HelloFiles = []string{
+		"templates/page.tmpl",
+		"templates/hello.tmpl",
+	}
+
+	TimeFiles = []string{
+		"templates/page.tmpl",
+		"templates/time.tmpl",
+	}
+
+	YotsubaFiles = []string{
+		"templates/page.tmpl",
+		"templates/yotsuba.tmpl",
+	}
+
+	LogoutFiles = []string{
+		"templates/page.tmpl",
+		"templates/logout.tmpl",
+	}
+	// master file list
+	files = map[string][]string{
+		"login" : LoginFiles,
+		"hello" : HelloFiles,
+		"yotsuba" : YotsubaFiles,
+		"time" : TimeFiles,
+		"logout" : LogoutFiles,
+	}
+)
+
+func GetPage(w http.ResponseWriter, page string, context interface{})(error){
+
+	tmpl := template.New(page)
+
+	// check for the page
+	
+	val, ok := files[page]
+	if ok {
+		var err error
+		tmpl, err = tmpl.ParseFiles( val... )
+		if err != nil {
+			
+			// template error
+			return errors.New("Template error")
+		}
+
+	} else {
+
+		// page not found error
+		return errors.New("Page type not found")
+
+	}
+	//no errors
+
+	tmpl.ExecuteTemplate(w,"page",context)
+	
+	return nil
+}
