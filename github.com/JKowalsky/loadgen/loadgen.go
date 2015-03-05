@@ -3,7 +3,7 @@
 package main
 
 import (
-
+	"flag"
 	"fmt"
 	"net/http"
 	"time"
@@ -12,17 +12,21 @@ import (
 )
 
 var (
-	rate = 200
-	burst = 30
-	timeoutMs = 400
-	runtime = 20 * time.Second
-	url = "localhost:8080/time"
+	rate = flag.Int("-rate", 200, "average rate of requests (per second)")
+	burst = flag.Int("-burst", 30, "number of concurrent requests to issue")
+	timeoutMs = flag.Int("-timeout-ms", 400, "max time to wait for response.")
+	f_runtime = flag.Int("-rate", 20, " number of seconds to process")
+	url = flag.String("--url", "localhost:8080/time", "url to sample.")
+
+	runtime = time.Duration((*f_runtime)) * time.Second // get runtime in seconds
 )
+
 var (
 	c = counter.New()
-
 )
 
+
+// A map of replies to count of those replies.
 var convert = map[int]string {
 	1: "100s",
 	2: "200s",
@@ -31,10 +35,10 @@ var convert = map[int]string {
 	5: "500s",
 }
 
-
+// Generate a new request to the server.
 func request() {
 	log.Info("New Request.")
-	timeout := time.Duration(timeoutMs) * time.Millisecond
+	timeout := time.Duration((*timeoutMs)) * time.Millisecond
 	client := http.Client{
 		Timeout : timeout,
 	}
@@ -53,16 +57,17 @@ func request() {
 	c.Incr(key, 1)
 }
 
+// load and start firing off bursts of requests.
 func load() {
 	timeout := time.Tick(runtime)
-	interval := time.Duration((1000000 * burst) / rate) * time.Microsecond
+	interval := time.Duration((1000000 * (*burst)) / (*rate)) * time.Microsecond
 	period := time.Tick(interval)
 
 	log.Info("Loading.")
 	for {
 		log.Info("Fire a burst.")
 		// fire off burst
-		for i := 0; i < burst; i++ {
+		for i := 0; i < (*burst); i++ {
 			go request()
 		}
 		//wait for next tick
@@ -74,14 +79,13 @@ func load() {
 			return
 		default:
 
-		}
-		
+		}	
 	}
 }
 
 func main () {
 	load()
-	time.Sleep( time.Duration( 2 * timeoutMs) * time.Millisecond )
+	time.Sleep( time.Duration( 2 * (*timeoutMs)) * time.Millisecond )
 	fmt.Printf("total: \t%d\n", c.Get("total"))
 	fmt.Printf("100s total: \t%d\n", c.Get("100s"))
 	fmt.Printf("200s total: \t%d\n", c.Get("200s"))
